@@ -1,5 +1,10 @@
 <script lang="ts">
   import './app.css'
+  import PlayCircle from 'svelte-icons/fa/FaPlayCircle.svelte'
+  import PauseCircle from 'svelte-icons/fa/FaPauseCircle.svelte'
+  import ArrowCircle from 'svelte-icons/fa/FaArrowCircleRight.svelte'
+  import Gear from 'svelte-icons/fa/FaCog.svelte'
+  import X from 'svelte-icons/fa/FaTimes.svelte'
 
   type Cell = {
     alive: boolean
@@ -53,16 +58,35 @@
   function tick() {
     data = data.reduce((acc, row, i) => {
       const newRow = row.reduce((acc, cell, j) => {
+        const iLeftWrapped = i === 0 ? data.length - 1 : i - 1
+        const iRightWrapped = i === data.length - 1 ? 0 : i + 1
+
+        const jLeftWrapped = j === 0 ? data.length - 1 : j - 1
+        const jRightWrapped = j === data.length - 1 ? 0 : j + 1
+
         const neighbors = [
-          data[i - 1]?.[j - 1],
-          data[i - 1]?.[j],
-          data[i - 1]?.[j + 1],
-          data[i]?.[j - 1],
-          data[i]?.[j + 1],
-          data[i + 1]?.[j - 1],
-          data[i + 1]?.[j],
-          data[i + 1]?.[j + 1],
-        ].filter((cell) => cell?.alive).length
+          data[iLeftWrapped]?.[jLeftWrapped],
+          data[iLeftWrapped]?.[j],
+          data[iLeftWrapped]?.[jRightWrapped],
+          data[i]?.[jLeftWrapped],
+          data[i]?.[jRightWrapped],
+          data[iRightWrapped]?.[jLeftWrapped],
+          data[iRightWrapped]?.[j],
+          data[iRightWrapped]?.[jRightWrapped],
+        ]
+          .map((cell, i) => {
+            if (!cell) {
+              return data[data.length - 1]?.[j - 1 + i]
+            }
+            return cell
+          })
+          .map((cell, i) => {
+            if (!cell) {
+              return data[0]?.[j - 1 + i]
+            }
+            return cell
+          })
+          .filter((cell) => cell?.alive).length
 
         if (cell && (neighbors < 2 || neighbors > 3)) {
           acc.push({ alive: false, age: 0, hover: 0 })
@@ -128,6 +152,13 @@ xxx`,
  xxx  
       
       `,
+    },
+    {
+      name: 'r-pentomino',
+      data: `
+ xx
+xx 
+ x `,
     },
   ]
 
@@ -241,16 +272,42 @@ xxx`,
     }, [] as Data)
     event.preventDefault()
   }
+
+  let settingsOpen = false
 </script>
 
 <svelte:head>
   <title>Game of Life</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
 </svelte:head>
 
 <main
-  class="flex min-h-screen w-screen items-center justify-center overflow-scroll bg-ash"
+  class="flex min-h-screen w-screen flex-col items-center justify-center overflow-scroll bg-ash"
 >
+  <div class="fixed top-10 left-1/2 flex -translate-x-1/2 gap-4">
+    <!-- Play & Reset buttons -->
+    <button
+      class="hover:bg-wenge-dark h-10 w-10  rounded-md  font-bold text-wenge"
+      on:click={!interval ? run : stop}
+    >
+      {#if interval}
+        <PauseCircle />
+      {:else}
+        <PlayCircle />
+      {/if}
+    </button>
+    <button
+      class="hover:bg-wenge-dark h-10 w-10 rounded-md font-bold text-wenge"
+      on:click={() =>
+        (data = data.map((row) =>
+          row.map((cell) => ({ alive: false, age: 0, hover: 0 }))
+        ))}
+    >
+      <ArrowCircle />
+    </button>
+  </div>
+
   <div class="fixed top-10 right-10 text-wenge">
     <h2>Catalog</h2>
     {#each catalog as item}
@@ -278,77 +335,6 @@ xxx`,
   </div>
 
   <div
-    class="fixed top-10 left-10 flex w-72 flex-col gap-4 border-4 border-wenge p-4 text-wenge 2xl:w-96"
-  >
-    <h2 class="text-lg font-bold">Dimensions</h2>
-    <input
-      class="accent-amarant"
-      type="range"
-      step="2"
-      bind:value={dimension}
-      min="2"
-      max="100"
-    />
-    <ul class="flex justify-between text-xs">
-      {#each Array(11).fill(0) as _, i}
-        <li>{i * 10}</li>
-      {/each}
-    </ul>
-
-    <h2 class="text-lg font-bold">Tick Speed</h2>
-    <input
-      type="range"
-      class="accent-amarant"
-      step="50"
-      bind:value={tickSpeed}
-      min="100"
-      max="1000"
-      on:change={() => {
-        if (interval) {
-          stop()
-          run()
-        }
-      }}
-    />
-    <ul class="flex justify-between text-xs">
-      <li>100</li>
-      <li>200</li>
-      <li>300</li>
-      <li>400</li>
-      <li>500</li>
-      <li>600</li>
-      <li>700</li>
-      <li>800</li>
-      <li>900</li>
-      <li>1000</li>
-    </ul>
-
-    <h2 class="text-lg font-bold">Zoom</h2>
-    <input
-      type="range"
-      step="0.05"
-      class="accent-amarant "
-      bind:value={zoom}
-      list="zoommarks"
-      min="0.05"
-      max="4"
-    />
-    <datalist id="zoommarks" class="flex justify-between text-xs">
-      {#each Array(Math.round(4 / 0.5)).fill(0) as _, i}
-        <option value={(i * 0.5).toFixed(2)} label={(i * 0.5).toFixed(2)} />
-      {/each}
-    </datalist>
-
-    <button
-      type="button"
-      class="border-[3px] border-wenge bg-amarant font-bold"
-      on:click={interval ? stop : run}
-    >
-      {interval ? 'Stop' : 'Run'}
-    </button>
-    <button type="button" on:click={tick}>Tick</button>
-  </div>
-  <div
     class={`grid w-auto grid-flow-dense gap-0 border-wenge`}
     style={`grid-template-columns: repeat(${dimension}, 0fr); grid-template-rows: repeat(${dimension}, 0fr); border-width: ${
       1 * zoom
@@ -374,6 +360,97 @@ xxx`,
         />
       {/each}
     {/each}
+  </div>
+  <div
+    class={`fixed top-10 left-10 flex w-${
+      settingsOpen ? 72 : 20
+    } flex-col gap-4 border-4 border-wenge bg-ash p-4 text-wenge transition-all 2xl:w-${
+      settingsOpen ? 96 : 20
+    }`}
+  >
+    {#if settingsOpen}
+      <button
+        class="absolute top-2 right-2 h-10 w-10 rounded-md bg-amarant p-2 font-bold text-wenge"
+        on:click={() => {
+          settingsOpen = false
+        }}
+      >
+        <X />
+      </button>
+      <h2 class="text-lg font-bold">Dimensions</h2>
+      <input
+        class="accent-amarant"
+        type="range"
+        step="2"
+        bind:value={dimension}
+        min="2"
+        max="100"
+      />
+      <ul class="flex justify-between text-xs">
+        {#each Array(11).fill(0) as _, i}
+          <li>{i * 10}</li>
+        {/each}
+      </ul>
+
+      <h2 class="text-lg font-bold">Tick Speed</h2>
+      <input
+        type="range"
+        class="accent-amarant"
+        step="50"
+        bind:value={tickSpeed}
+        min="100"
+        max="1000"
+        on:change={() => {
+          if (interval) {
+            stop()
+            run()
+          }
+        }}
+      />
+      <ul class="flex justify-between text-xs">
+        <li>100</li>
+        <li>200</li>
+        <li>300</li>
+        <li>400</li>
+        <li>500</li>
+        <li>600</li>
+        <li>700</li>
+        <li>800</li>
+        <li>900</li>
+        <li>1000</li>
+      </ul>
+
+      <h2 class="text-lg font-bold">Zoom</h2>
+      <input
+        type="range"
+        step="0.05"
+        class="accent-amarant "
+        bind:value={zoom}
+        list="zoommarks"
+        min="0.05"
+        max="4"
+      />
+      <datalist id="zoommarks" class="flex justify-between text-xs">
+        {#each Array(Math.round(4 / 0.5)).fill(0) as _, i}
+          <option value={(i * 0.5).toFixed(2)} label={(i * 0.5).toFixed(2)} />
+        {/each}
+      </datalist>
+
+      <button
+        type="button"
+        class="border-[3px] border-wenge bg-amarant font-bold"
+        on:click={interval ? stop : run}
+      >
+        {interval ? 'Stop' : 'Run'}
+      </button>
+      <button type="button" on:click={tick}>Tick</button>
+    {:else}
+      <button
+        type="button"
+        class="text-small h-5 w-5"
+        on:click={() => (settingsOpen = true)}><Gear /></button
+      >
+    {/if}
   </div>
 </main>
 <!-- 
