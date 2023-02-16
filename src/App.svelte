@@ -82,6 +82,8 @@
 
   function handleClick(event: MouseEvent | KeyboardEvent) {
     if (!event.target) return
+
+    // @ts-expect-error yes there is
     const [x, y] = event.target['dataset']?.cell.split(',').map(Number)
     console.log(x, y)
     // data[x][y] = !data[x][y]
@@ -187,7 +189,8 @@ xxx`,
     if (!event.dataTransfer) return
     if (!draggedData) {
       event.dataTransfer.dropEffect = 'none'
-      const [x, y] = event.target['dataset']?.cell.split(',').map(Number)
+      // @ts-expect-error yes there is
+      const [x, y] = event.target?.['dataset']?.cell.split(',').map(Number)
       data = data.reduce((acc, row, i) => {
         const newRow = row.reduce((acc, cell, j) => {
           if (i === x && j === y) {
@@ -204,6 +207,7 @@ xxx`,
     }
     event.dataTransfer.dropEffect = 'move'
 
+    // @ts-expect-error yes there is
     const [x, y] = event.target['dataset']?.cell.split(',').map(Number)
 
     const formattedData = draggedData
